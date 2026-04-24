@@ -1,0 +1,45 @@
+RedLnx Runtime Dependencies — NVIDIA CUDA / cuDNN
+==================================================
+
+This package contains pre-built binary libraries ("DLLs") from NVIDIA
+Corporation, redistributed under the terms of the NVIDIA Software License
+Agreement.  These files are NOT open-source and are NOT covered by the
+AGPL-3.0 license that governs the RedLnx source code.
+
+The included DLLs are provided solely for the purpose of enabling GPU-
+accelerated inference inside the RedLnx application.  They are unmodified
+copies of the official NVIDIA redistributable binaries obtained from:
+
+  CUDA Toolkit  — https://developer.nvidia.com/cuda-toolkit
+  cuDNN SDK     — https://developer.nvidia.com/cudnn
+
+By downloading or using these files, you agree to the NVIDIA license terms
+included in this package:
+
+  NVIDIA-CUDA-LICENSE.txt   — NVIDIA CUDA Toolkit EULA
+  NVIDIA-CUDNN-LICENSE.txt  — NVIDIA cuDNN SDK License Agreement
+
+NVIDIA, CUDA, and cuDNN are trademarks or registered trademarks of
+NVIDIA Corporation.
+
+This redistribution is permitted under section 1.1(iii) and 1.2 of the
+NVIDIA Software License Agreement, which allows distribution of the
+"distributable" portions of the SDK as incorporated into a software
+application with material additional functionality.
+
+RedLnx is not affiliated with, endorsed by, or sponsored by NVIDIA
+Corporation.
+
+Package contents
+----------------
+cuda12-win-x64.zip:
+  cublas64_12.dll, cublasLt64_12.dll, cudart64_12.dll,
+  cufft64_12.dll, curand64_10.dll, cusolver64_12.dll, cusparse64_12.dll
+
+cudnn9-cuda12-win-x64.zip:
+  cudnn64_9.dll, cudnn_adv64_9.dll, cudnn_cnn64_9.dll,
+  cudnn_engines_precompiled64_9.dll, cudnn_engines_runtime_compiled64_9.dll,
+  cudnn_engines_tensor_ir64_9.dll, cudnn_graph64_9.dll,
+  cudnn_heuristic64_9.dll, cudnn_ops64_9.dll
+
+Compatibility: ONNX Runtime 1.20.x with CUDA 12 Execution Provider.
