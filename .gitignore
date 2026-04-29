@@ -46,6 +46,7 @@ Thumbs.db
 !NVIDIA-*-LICENSE.txt
 !bin/
 !bin/*.sh
+!bin/*.ps1
 !manifests/
 !manifests/*.json
 !.github/
