@@ -65,6 +65,14 @@ function Require-Cmd {
 }
 
 function Require-MsvcCompiler {
+    $clPath = (Get-Command cl.exe -ErrorAction Stop).Source
+    if ($env:VSCMD_ARG_TGT_ARCH -and $env:VSCMD_ARG_TGT_ARCH -ne "x64") {
+        throw "ONNX Runtime Windows artifacts must be built for x64. Current VS target architecture is '$env:VSCMD_ARG_TGT_ARCH' ($clPath). Open an x64 Native Tools prompt from VS 2022 Build Tools."
+    }
+    if ($clPath -match "\\Host[^\\]+\\x86\\cl\.exe$") {
+        throw "ONNX Runtime Windows artifacts must be built with the x64 target compiler. Current cl.exe targets x86: $clPath. Open an x64 Native Tools prompt from VS 2022 Build Tools."
+    }
+
     if ($env:VCToolsVersion -match "^(\d+)\.(\d+)") {
         $major = [int]$Matches[1]
         $minor = [int]$Matches[2]
@@ -74,7 +82,6 @@ function Require-MsvcCompiler {
         return
     }
 
-    $clPath = (Get-Command cl.exe -ErrorAction Stop).Source
     $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($clPath)
     $major = [int]$versionInfo.FileMajorPart
     $minor = [int]$versionInfo.FileMinorPart
