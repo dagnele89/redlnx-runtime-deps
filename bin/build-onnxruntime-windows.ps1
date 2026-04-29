@@ -34,9 +34,9 @@ Switch — remove provider build directory before building.
 
 .NOTES
 Requires: Git, Python 3.11+, CMake 3.26+, Visual Studio 2022 Build Tools
-17.10+ (MSVC 19.40+ / v143 + Windows 10/11 SDK), Ninja, Node.js 20+
-with npm 10+, 7-Zip (for archive packaging). GitHub `windows-2022`
-runners have all of these.
+17.10+ (MSVC 19.40+ / v143 + Windows 10/11 SDK + ATL), Ninja,
+Node.js 20+ with npm 10+. GitHub `windows-2022` runners have all of
+these.
 #>
 [CmdletBinding()]
 param(
@@ -64,6 +64,32 @@ function Require-Cmd {
     }
 }
 
+function Require-PythonVersion {
+    $pythonVersion = [string](& python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')")
+    if ($pythonVersion -notmatch "^(\d+)\.(\d+)") {
+        throw "could not detect Python version: $pythonVersion"
+    }
+
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    if ($major -lt 3 -or ($major -eq 3 -and $minor -lt 11)) {
+        throw "ONNX Runtime $OrtVersion needs Python 3.11+. Current Python is $pythonVersion."
+    }
+}
+
+function Require-CmakeVersion {
+    $cmakeVersionLine = [string](& cmake --version | Select-Object -First 1)
+    if ($cmakeVersionLine -notmatch "(\d+)\.(\d+)\.(\d+)") {
+        throw "could not detect CMake version from output: $cmakeVersionLine"
+    }
+
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    if ($major -lt 3 -or ($major -eq 3 -and $minor -lt 26)) {
+        throw "ONNX Runtime $OrtVersion needs CMake 3.26+. Current CMake is $($Matches[0])."
+    }
+}
+
 function Require-MsvcCompiler {
     $clPath = (Get-Command cl.exe -ErrorAction Stop).Source
     if ($env:VSCMD_ARG_TGT_ARCH -and $env:VSCMD_ARG_TGT_ARCH -ne "x64") {
@@ -87,6 +113,50 @@ function Require-MsvcCompiler {
     $minor = [int]$versionInfo.FileMinorPart
     if ($major -lt 19 -or ($major -eq 19 -and $minor -lt 40)) {
         throw "ONNX Runtime $OrtVersion needs MSVC 14.40+ / cl.exe 19.40+ (VS 2022 17.10+). Current cl.exe is $major.$minor at $clPath. Open an x64 Native Tools prompt from VS 2022 Build Tools."
+    }
+}
+
+function Require-AtlHeaders {
+    $atlBase = $null
+    if ($env:VCToolsInstallDir) {
+        $candidate = Join-Path $env:VCToolsInstallDir "ATLMFC\include\atlbase.h"
+        if (Test-Path $candidate) { $atlBase = $candidate }
+    }
+
+    if (-not $atlBase -and $env:INCLUDE) {
+        foreach ($includeDir in ($env:INCLUDE -split ";")) {
+            if (-not $includeDir) { continue }
+            $candidate = Join-Path $includeDir "atlbase.h"
+            if (Test-Path $candidate) {
+                $atlBase = $candidate
+                break
+            }
+        }
+    }
+
+    if (-not $atlBase) {
+        throw "ATL headers are missing (atlbase.h). Install the VS 2022 Build Tools component Microsoft.VisualStudio.Component.VC.ATL, then reopen the x64 Native Tools prompt."
+    }
+}
+
+function Require-WindowsSdkHeaders {
+    if (-not $env:INCLUDE) {
+        throw "INCLUDE is empty. Open an x64 Native Tools prompt from VS 2022 Build Tools so the Windows SDK environment is loaded."
+    }
+
+    foreach ($header in @("windows.h", "d3d12.h", "dxgi1_6.h")) {
+        $found = $false
+        foreach ($includeDir in ($env:INCLUDE -split ";")) {
+            if (-not $includeDir) { continue }
+            if (Test-Path (Join-Path $includeDir $header)) {
+                $found = $true
+                break
+            }
+        }
+
+        if (-not $found) {
+            throw "Windows SDK header '$header' was not found in INCLUDE. Install a Windows 10/11 SDK through VS 2022 Build Tools, then reopen the x64 Native Tools prompt."
+        }
     }
 }
 
@@ -134,6 +204,8 @@ function Require-NodeTools {
 Require-Cmd git
 Require-Cmd python
 Require-Cmd cmake
+Require-PythonVersion
+Require-CmakeVersion
 
 $SourceDir = Join-Path $WorkDir "onnxruntime-$OrtVersion"
 $RepoUrl   = "https://github.com/microsoft/onnxruntime.git"
@@ -197,6 +269,8 @@ function Build-Provider {
         throw "cl.exe is not in PATH. Re-run from an `"x64 Native Tools Command Prompt`" so MSVC env is loaded."
     }
     Require-MsvcCompiler
+    Require-AtlHeaders
+    Require-WindowsSdkHeaders
     if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
         throw "ninja.exe is not in PATH. Install Ninja (`"winget install Ninja-build.Ninja`") or use a Native Tools prompt that bundles it."
     }
