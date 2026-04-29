@@ -1,0 +1,93 @@
+RedLnx Runtime Dependencies Notice
+==================================
+
+This repository stores helper scripts and release assets for optional RedLnx
+runtime dependencies. These binary assets are separate third-party components
+and are NOT covered by the AGPL-3.0 license that governs the RedLnx source
+code.
+
+Linux ONNX Runtime WebGPU/Vulkan runtime
+----------------------------------------
+
+Package:
+
+  redlnx-onnxruntime-linux-x64-webgpu-1.24.2.tar.zst
+
+SHA256:
+
+  9c786f8ee837add2392bb38009fd35d3a5066dc4518d629cb31d0a994366d2d6
+
+Contents:
+
+  libonnxruntime.so
+  libonnxruntime.so.1
+  libonnxruntime.so.1.24.2
+  libonnxruntime_providers_shared.so
+  libonnxruntime_providers_webgpu.so
+  LICENSE
+  ThirdPartyNotices.txt
+  VERSION_NUMBER
+  runtime-manifest.txt
+  redlnx-runtime-package.json
+
+The package is built from ONNX Runtime 1.24.2 and enables the ONNX Runtime
+WebGPU execution provider. RedLnx registers this provider with Dawn's Vulkan
+backend and labels it as the Linux Vulkan fallback in the application UI.
+
+ONNX Runtime is licensed under the MIT License. The release archive includes
+the upstream ONNX Runtime LICENSE and ThirdPartyNotices.txt files. Those files
+must stay with the archive and installed runtime files.
+
+Dawn/WebGPU and related Vulkan build dependencies are covered by their own
+upstream open-source notices as captured by the ONNX Runtime third-party
+notices file included in the package.
+
+Vulkan is a registered trademark of the Khronos Group Inc. WebGPU is a W3C web
+standard. Dawn is an open-source WebGPU implementation from the Chromium
+project.
+
+NVIDIA CUDA / cuDNN runtime
+---------------------------
+
+This package contains pre-built binary libraries ("DLLs") from NVIDIA
+Corporation, redistributed under the terms of the NVIDIA Software License
+Agreement.  These files are NOT open-source and are NOT covered by the
+AGPL-3.0 license that governs the RedLnx source code.
+
+The included DLLs are provided solely for the purpose of enabling GPU-
+accelerated inference inside the RedLnx application.  They are unmodified
+copies of the official NVIDIA redistributable binaries obtained from:
+
+  CUDA Toolkit  — https://developer.nvidia.com/cuda-toolkit
+  cuDNN SDK     — https://developer.nvidia.com/cudnn
+
+By downloading or using these files, you agree to the NVIDIA license terms
+included in this package:
+
+  NVIDIA-CUDA-LICENSE.txt   — NVIDIA CUDA Toolkit EULA
+  NVIDIA-CUDNN-LICENSE.txt  — NVIDIA cuDNN SDK License Agreement
+
+NVIDIA, CUDA, and cuDNN are trademarks or registered trademarks of
+NVIDIA Corporation.
+
+This redistribution is permitted under section 1.1(iii) and 1.2 of the
+NVIDIA Software License Agreement, which allows distribution of the
+"distributable" portions of the SDK as incorporated into a software
+application with material additional functionality.
+
+RedLnx is not affiliated with, endorsed by, or sponsored by NVIDIA
+Corporation.
+
+Package contents
+----------------
+cuda12-win-x64.zip:
+  cublas64_12.dll, cublasLt64_12.dll, cudart64_12.dll,
+  cufft64_12.dll, curand64_10.dll, cusolver64_12.dll, cusparse64_12.dll
+
+cudnn9-cuda12-win-x64.zip:
+  cudnn64_9.dll, cudnn_adv64_9.dll, cudnn_cnn64_9.dll,
+  cudnn_engines_precompiled64_9.dll, cudnn_engines_runtime_compiled64_9.dll,
+  cudnn_engines_tensor_ir64_9.dll, cudnn_graph64_9.dll,
+  cudnn_heuristic64_9.dll, cudnn_ops64_9.dll
+
+Compatibility: ONNX Runtime 1.20.x with CUDA 12 Execution Provider.

@@ -1,0 +1,52 @@
+# Local downloads and generated artifacts
+dist/
+.work/
+downloads/
+tmp/
+cache/
+bin/
+
+# Runtime archives and checksums are release assets, not Git-tracked files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.tar.zst
+*.sha256
+
+# Extracted runtime binaries
+*.dll
+*.so
+*.so.*
+*.dylib
+*.a
+*.lib
+*.pdb
+
+# Generated runtime metadata
+runtime-manifest.txt
+redlnx-runtime-package.json
+
+# Logs
+*.log
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Keep repo docs, manifests, and workflows tracked
+!README*.md
+!README*.txt
+!NOTICE*.txt
+!LICENSE*
+!NVIDIA-*-LICENSE.txt
+!manifests/
+!manifests/*.json
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml

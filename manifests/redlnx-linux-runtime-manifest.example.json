@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "releaseTag": "v1-linux-runtime",
+  "onnxRuntimeVersion": "1.24.2",
+  "packages": [
+    {
+      "id": "linux-x64-migraphx",
+      "platform": "linux-x64",
+      "provider": "migraphx",
+      "displayName": "Linux x64 AMD MIGraphX runtime",
+      "url": "https://github.com/dagnele89/redlnx-runtime-deps/releases/download/v1-linux-runtime/redlnx-onnxruntime-linux-x64-migraphx-1.24.2-rocm6.tar.zst",
+      "sha256": "replace-after-build",
+      "requiredFiles": [
+        "libonnxruntime.so",
+        "libonnxruntime_providers_migraphx.so"
+      ],
+      "systemRequirements": [
+        "ROCm runtime installed on target machine",
+        "MIGraphX runtime/development libraries available on target machine"
+      ]
+    },
+    {
+      "id": "linux-x64-webgpu",
+      "platform": "linux-x64",
+      "provider": "webgpu",
+      "displayName": "Linux x64 WebGPU/Vulkan runtime",
+      "url": "https://github.com/dagnele89/redlnx-runtime-deps/releases/download/v1-linux-runtime/redlnx-onnxruntime-linux-x64-webgpu-1.24.2.tar.zst",
+      "sha256": "9c786f8ee837add2392bb38009fd35d3a5066dc4518d629cb31d0a994366d2d6",
+      "requiredFiles": [
+        "libonnxruntime.so",
+        "libonnxruntime_providers_webgpu.so"
+      ],
+      "systemRequirements": [
+        "Vulkan loader and working GPU driver installed on target machine"
+      ]
+    }
+  ]
+}
