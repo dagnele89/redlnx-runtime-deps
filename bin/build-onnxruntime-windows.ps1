@@ -34,8 +34,8 @@ Switch — remove provider build directory before building.
 
 .NOTES
 Requires: Git, Python 3.11+, CMake 3.26+, Visual Studio 2022 Build Tools
-(MSVC v143 + Windows 10/11 SDK), 7-Zip (for archive packaging).
-GitHub `windows-2022` runners have all of these.
+17.10+ (MSVC 19.40+ / v143 + Windows 10/11 SDK), Ninja, 7-Zip (for
+archive packaging). GitHub `windows-2022` runners have all of these.
 #>
 [CmdletBinding()]
 param(
@@ -60,6 +60,27 @@ function Require-Cmd {
     param([string]$Name)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
         throw "missing required command: $Name"
+    }
+}
+
+function Require-MsvcCompiler {
+    $clOutput = & cl.exe 2>&1 | Select-Object -First 1
+    $clBanner = [string]$clOutput
+    if ($clBanner -notmatch "Version\s+(\d+)\.(\d+)") {
+        throw "could not detect MSVC version from cl.exe output: $clBanner"
+    }
+
+    $major = [int]$Matches[1]
+    $minor = [int]$Matches[2]
+    if ($major -lt 19 -or ($major -eq 19 -and $minor -lt 40)) {
+        throw "ONNX Runtime $OrtVersion needs MSVC 19.40+ (VS 2022 17.10+). Current cl.exe is $major.$minor. Open an x64 Native Tools prompt from VS 2022 Build Tools."
+    }
+}
+
+function Add-GitUsrBinToPath {
+    $gitUsrBin = "C:\Program Files\Git\usr\bin"
+    if ((Test-Path $gitUsrBin) -and ($env:PATH -notlike "*$gitUsrBin*")) {
+        $env:PATH = "$gitUsrBin;$env:PATH"
     }
 }
 
@@ -104,18 +125,17 @@ function Build-Provider {
         default  { throw "unsupported provider $Provider" }
     }
 
-    $buildScript = Join-Path $SourceDir "build.bat"
+    $buildScript = Join-Path $SourceDir "tools\ci_build\build.py"
     if (-not (Test-Path $buildScript)) {
-        throw "build.bat not found under $SourceDir"
+        throw "build.py not found under $SourceDir"
     }
 
     # Use Ninja as the CMake generator. Reasons:
     # - ORT 1.24.2 build.py only accepts "Visual Studio 17 2022" / "18 2026"
     #   among VS generators — VS 2019 is no longer in the supported list.
     # - Ninja is generator-agnostic: it just needs `cl.exe` in PATH, which
-    #   the x64 Native Tools prompt provides for whichever VS version is
-    #   installed (2019 BuildTools / 2022 / 2026), so the same build line
-    #   works on every developer machine.
+    #   the x64 Native Tools prompt provides when VS 2022 Build Tools 17.10+
+    #   are installed.
     # - It's also what the Linux script uses (Ninja on linux/mac), keeping
     #   the two pipelines symmetric.
     # Ninja ships with every modern VS install under
@@ -129,6 +149,7 @@ function Build-Provider {
     if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
         throw "cl.exe is not in PATH. Re-run from an `"x64 Native Tools Command Prompt`" so MSVC env is loaded."
     }
+    Require-MsvcCompiler
     if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
         throw "ninja.exe is not in PATH. Install Ninja (`"winget install Ninja-build.Ninja`") or use a Native Tools prompt that bundles it."
     }
@@ -139,7 +160,11 @@ function Build-Provider {
     # tolerate compiler warnings by leaving the default behaviour alone;
     # if a build breaks on a real warning, fix the warning rather than
     # silencing every check.
-    & $buildScript `
+    # Call build.py directly. ORT's build.bat prepends its own
+    # `--build_dir <source>\build\Windows`, which makes diagnostics noisy
+    # and can mask the build directory selected by this script.
+    Add-GitUsrBinToPath
+    & python $buildScript `
         --config Release `
         --build_shared_lib `
         --parallel $Jobs `
@@ -148,7 +173,7 @@ function Build-Provider {
         --cmake_generator "$generator" `
         --update --build `
         @providerArgs
-    if ($LASTEXITCODE -ne 0) { throw "build.bat failed for $Provider" }
+    if ($LASTEXITCODE -ne 0) { throw "build.py failed for $Provider" }
 
     Package-Provider -Provider $Provider -BuildDir $BuildDir
 }
