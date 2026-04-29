@@ -293,6 +293,7 @@ function Build-Provider {
         --skip_tests `
         --build_dir $BuildDir `
         --cmake_generator "$generator" `
+        --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF `
         --update --build `
         @providerArgs
     if ($LASTEXITCODE -ne 0) { throw "build.py failed for $Provider" }
