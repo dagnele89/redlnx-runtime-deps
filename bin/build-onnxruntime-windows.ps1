@@ -64,16 +64,21 @@ function Require-Cmd {
 }
 
 function Require-MsvcCompiler {
-    $clOutput = & cl.exe 2>&1 | Select-Object -First 1
-    $clBanner = [string]$clOutput
-    if ($clBanner -notmatch "Version\s+(\d+)\.(\d+)") {
-        throw "could not detect MSVC version from cl.exe output: $clBanner"
+    if ($env:VCToolsVersion -match "^(\d+)\.(\d+)") {
+        $major = [int]$Matches[1]
+        $minor = [int]$Matches[2]
+        if ($major -lt 14 -or ($major -eq 14 -and $minor -lt 40)) {
+            throw "ONNX Runtime $OrtVersion needs MSVC 14.40+ / cl.exe 19.40+ (VS 2022 17.10+). Current VCToolsVersion is $env:VCToolsVersion. Open an x64 Native Tools prompt from VS 2022 Build Tools."
+        }
+        return
     }
 
-    $major = [int]$Matches[1]
-    $minor = [int]$Matches[2]
+    $clPath = (Get-Command cl.exe -ErrorAction Stop).Source
+    $versionInfo = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($clPath)
+    $major = [int]$versionInfo.FileMajorPart
+    $minor = [int]$versionInfo.FileMinorPart
     if ($major -lt 19 -or ($major -eq 19 -and $minor -lt 40)) {
-        throw "ONNX Runtime $OrtVersion needs MSVC 19.40+ (VS 2022 17.10+). Current cl.exe is $major.$minor. Open an x64 Native Tools prompt from VS 2022 Build Tools."
+        throw "ONNX Runtime $OrtVersion needs MSVC 14.40+ / cl.exe 19.40+ (VS 2022 17.10+). Current cl.exe is $major.$minor at $clPath. Open an x64 Native Tools prompt from VS 2022 Build Tools."
     }
 }
 
