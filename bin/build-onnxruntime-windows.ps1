@@ -34,8 +34,9 @@ Switch — remove provider build directory before building.
 
 .NOTES
 Requires: Git, Python 3.11+, CMake 3.26+, Visual Studio 2022 Build Tools
-17.10+ (MSVC 19.40+ / v143 + Windows 10/11 SDK), Ninja, 7-Zip (for
-archive packaging). GitHub `windows-2022` runners have all of these.
+17.10+ (MSVC 19.40+ / v143 + Windows 10/11 SDK), Ninja, Node.js 20+
+with npm 10+, 7-Zip (for archive packaging). GitHub `windows-2022`
+runners have all of these.
 #>
 [CmdletBinding()]
 param(
@@ -86,6 +87,40 @@ function Add-GitUsrBinToPath {
     $gitUsrBin = "C:\Program Files\Git\usr\bin"
     if ((Test-Path $gitUsrBin) -and ($env:PATH -notlike "*$gitUsrBin*")) {
         $env:PATH = "$gitUsrBin;$env:PATH"
+    }
+}
+
+function Require-NodeTools {
+    $nodePath = (Get-Command node.exe -ErrorAction SilentlyContinue).Source
+    if (-not $nodePath) {
+        throw "node.exe is not in PATH. Install Node.js 20+ with npm 10+ before building the WebGPU provider."
+    }
+
+    $nodeVersion = [string](& $nodePath --version)
+    if ($nodeVersion -notmatch "^v(\d+)\.") {
+        throw "could not detect Node.js version from $nodePath output: $nodeVersion"
+    }
+    if ([int]$Matches[1] -lt 20) {
+        throw "ONNX Runtime WebGPU needs Node.js 20+. Current Node.js is $nodeVersion at $nodePath."
+    }
+
+    # ORT's CMake helper requires npm to live next to node.exe; a newer npm
+    # elsewhere in PATH is ignored.
+    $nodeDir = Split-Path -Parent $nodePath
+    $npmPath = Join-Path $nodeDir "npm.cmd"
+    if (-not (Test-Path $npmPath)) {
+        $npmPath = Join-Path $nodeDir "npm"
+    }
+    if (-not (Test-Path $npmPath)) {
+        throw "npm was not found next to node.exe under $nodeDir. Reinstall Node.js 20+ so npm.cmd is installed beside node.exe."
+    }
+
+    $npmVersion = [string](& $npmPath --version)
+    if ($npmVersion -notmatch "^(\d+)\.") {
+        throw "could not detect npm version from $npmPath output: $npmVersion"
+    }
+    if ([int]$Matches[1] -lt 10) {
+        throw "ONNX Runtime WebGPU needs npm 10+ next to node.exe. Current npm is $npmVersion at $npmPath. Reinstall Node.js 20+ or update that npm installation."
     }
 }
 
@@ -158,6 +193,7 @@ function Build-Provider {
     if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
         throw "ninja.exe is not in PATH. Install Ninja (`"winget install Ninja-build.Ninja`") or use a Native Tools prompt that bundles it."
     }
+    Require-NodeTools
 
     # Note: `--compile_no_warning_as_error` was dropped — ORT 1.24.2's
     # build.py either renamed or removed it, and PowerShell ended up
