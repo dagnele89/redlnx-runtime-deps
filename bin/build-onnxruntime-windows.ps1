@@ -297,7 +297,7 @@ function Build-Provider {
         --skip_tests `
         --build_dir $BuildDir `
         --cmake_generator "$generator" `
-        --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF onnxruntime_BUILD_DAWN_SHARED_LIBRARY=ON onnxruntime_ENABLE_DAWN_BACKEND_VULKAN=ON `
+        --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF onnxruntime_BUILD_DAWN_SHARED_LIBRARY=ON onnxruntime_ENABLE_DAWN_BACKEND_VULKAN=ON CMAKE_SHARED_LINKER_FLAGS=delayimp.lib `
         --update --build `
         @providerArgs
     if ($LASTEXITCODE -ne 0) { throw "build.py failed for $Provider" }
