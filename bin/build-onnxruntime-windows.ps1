@@ -109,14 +109,33 @@ function Build-Provider {
         throw "build.bat not found under $SourceDir"
     }
 
-    Write-Host "Building provider=$Provider build_dir=$BuildDir jobs=$Jobs" -ForegroundColor Cyan
+    # Force the CMake generator to match the Visual Studio install actually
+    # present on the host. ORT's build.py defaults to "Visual Studio 17
+    # 2022" which fails on machines that only have VS 2019 BuildTools.
+    # Auto-detect by looking at where vcvars64.bat lives.
+    $generator = "Visual Studio 16 2019"
+    if (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat") {
+        $generator = "Visual Studio 17 2022"
+    } elseif (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat") {
+        $generator = "Visual Studio 17 2022"
+    } elseif (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat") {
+        $generator = "Visual Studio 17 2022"
+    }
+    Write-Host "Building provider=$Provider build_dir=$BuildDir jobs=$Jobs generator='$generator'" -ForegroundColor Cyan
+
+    # Note: `--compile_no_warning_as_error` was dropped — ORT 1.24.2's
+    # build.py either renamed or removed it, and PowerShell ended up
+    # leaking the flag straight into the cmake invocation. Instead we
+    # tolerate compiler warnings by leaving the default behaviour alone;
+    # if a build breaks on a real warning, fix the warning rather than
+    # silencing every check.
     & $buildScript `
         --config Release `
         --build_shared_lib `
         --parallel $Jobs `
         --skip_tests `
         --build_dir $BuildDir `
-        --compile_no_warning_as_error `
+        --cmake_generator "$generator" `
         --update --build `
         @providerArgs
     if ($LASTEXITCODE -ne 0) { throw "build.bat failed for $Provider" }
