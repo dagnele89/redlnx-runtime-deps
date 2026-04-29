@@ -235,12 +235,16 @@ function Build-Provider {
         Remove-Item -Recurse -Force $BuildDir
     }
 
-    # `--use_webgpu shared_lib` makes the provider load as
-    # onnxruntime_providers_webgpu.dll instead of being statically linked
-    # into onnxruntime.dll — same approach as the Linux script.
+    # ORT 1.24.2 does not ship a complete WebGPU plugin EP implementation:
+    # ep/symbols.def exports CreateEpFactories/ReleaseEpFactory, but the
+    # matching ep/api.cc implementation is absent in the tag. Building
+    # `--use_webgpu shared_lib` therefore fails at link with two unresolved
+    # externals. Use the upstream-supported layout for this tag: WebGPU is
+    # statically linked into onnxruntime.dll, while Dawn/DXC DLLs remain
+    # side-by-side runtime dependencies.
     $providerArgs = @()
     switch ($Provider) {
-        "webgpu" { $providerArgs = @("--use_webgpu", "shared_lib") }
+        "webgpu" { $providerArgs = @("--use_webgpu", "static_lib") }
         default  { throw "unsupported provider $Provider" }
     }
 
@@ -293,7 +297,7 @@ function Build-Provider {
         --skip_tests `
         --build_dir $BuildDir `
         --cmake_generator "$generator" `
-        --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF `
+        --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF onnxruntime_BUILD_DAWN_SHARED_LIBRARY=ON onnxruntime_ENABLE_DAWN_BACKEND_VULKAN=ON `
         --update --build `
         @providerArgs
     if ($LASTEXITCODE -ne 0) { throw "build.py failed for $Provider" }
@@ -344,15 +348,17 @@ function Package-Provider {
 
     $copied = @()
     foreach ($pat in $patterns) {
-        $found = Get-ChildItem -Path $releaseRoot -Filter $pat -ErrorAction SilentlyContinue
-        foreach ($f in $found) {
-            Copy-Item -Path $f.FullName -Destination $packageDir
-            $copied += $f.Name
+        $found = Get-ChildItem -Path $releaseRoot -Filter $pat -File -Recurse -ErrorAction SilentlyContinue |
+            Sort-Object { $_.FullName.Length } |
+            Select-Object -First 1
+        if ($found) {
+            Copy-Item -Path $found.FullName -Destination $packageDir -Force
+            $copied += $found.Name
         }
     }
 
     # Required deliverables — fail the build immediately if missing.
-    $required = @("onnxruntime.dll", "onnxruntime_providers_webgpu.dll")
+    $required = @("onnxruntime.dll", "webgpu_dawn.dll", "dxcompiler.dll", "dxil.dll")
     foreach ($r in $required) {
         if (-not (Test-Path (Join-Path $packageDir $r))) {
             Write-Host "files copied so far: $($copied -join ', ')" -ForegroundColor Yellow
@@ -389,7 +395,8 @@ function Package-Provider {
         provider            = $Provider
         notes               = @(
             "Copy or extract these files into RedLnx runtime storage, or point REDLNX_RUNTIME_DIR at this directory.",
-            "WebGPU on Windows uses Dawn with a Vulkan/D3D12 backend. The host needs working Vulkan or D3D12 drivers from the GPU vendor."
+            "WebGPU on Windows is statically linked into onnxruntime.dll for ORT 1.24.2; webgpu_dawn.dll and DXC DLLs must remain beside it.",
+            "The host needs working Vulkan or D3D12 drivers from the GPU vendor."
         )
     }
     $manifest | ConvertTo-Json -Depth 4 |
