@@ -109,19 +109,29 @@ function Build-Provider {
         throw "build.bat not found under $SourceDir"
     }
 
-    # Force the CMake generator to match the Visual Studio install actually
-    # present on the host. ORT's build.py defaults to "Visual Studio 17
-    # 2022" which fails on machines that only have VS 2019 BuildTools.
-    # Auto-detect by looking at where vcvars64.bat lives.
-    $generator = "Visual Studio 16 2019"
-    if (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat") {
-        $generator = "Visual Studio 17 2022"
-    } elseif (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat") {
-        $generator = "Visual Studio 17 2022"
-    } elseif (Test-Path "$env:ProgramFiles\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat") {
-        $generator = "Visual Studio 17 2022"
-    }
+    # Use Ninja as the CMake generator. Reasons:
+    # - ORT 1.24.2 build.py only accepts "Visual Studio 17 2022" / "18 2026"
+    #   among VS generators — VS 2019 is no longer in the supported list.
+    # - Ninja is generator-agnostic: it just needs `cl.exe` in PATH, which
+    #   the x64 Native Tools prompt provides for whichever VS version is
+    #   installed (2019 BuildTools / 2022 / 2026), so the same build line
+    #   works on every developer machine.
+    # - It's also what the Linux script uses (Ninja on linux/mac), keeping
+    #   the two pipelines symmetric.
+    # Ninja ships with every modern VS install under
+    # `...\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe`
+    # and the Native Tools prompt puts that directory in PATH for us.
+    $generator = "Ninja"
     Write-Host "Building provider=$Provider build_dir=$BuildDir jobs=$Jobs generator='$generator'" -ForegroundColor Cyan
+
+    # Sanity check: make sure cl.exe and ninja.exe are both visible —
+    # without them Ninja generation will fail with a confusing message.
+    if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
+        throw "cl.exe is not in PATH. Re-run from an `"x64 Native Tools Command Prompt`" so MSVC env is loaded."
+    }
+    if (-not (Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
+        throw "ninja.exe is not in PATH. Install Ninja (`"winget install Ninja-build.Ninja`") or use a Native Tools prompt that bundles it."
+    }
 
     # Note: `--compile_no_warning_as_error` was dropped — ORT 1.24.2's
     # build.py either renamed or removed it, and PowerShell ended up
