@@ -30,6 +30,22 @@ Then run RedLnx with the runtime folder explicitly if needed:
 This keeps the repo as the source for scripts/manifests and GitHub Releases as
 the source for large binaries.
 
+Camera look bake
+----------------
+
+Generate the deterministic Camera Looks F bundle from the pinned darktable
+source snapshot:
+
+  python bin/bake-camera-looks.py \
+    --darktable-root /path/to/darktable \
+    --output .work/camera-looks
+
+The script verifies the source files by SHA256 before generating six 33x33x33
+`.cube` files, a per-file manifest, NOTICE, and
+`redlnx-camera-looks-f-v1.zip`. The LUTs preserve Lab lightness: they carry
+only the community chroma/monochrome character while RedLnx owns the tone
+curve.
+
 What these files build
 ----------------------
 

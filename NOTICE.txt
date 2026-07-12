@@ -78,6 +78,43 @@ application with material additional functionality.
 RedLnx is not affiliated with, endorsed by, or sponsored by NVIDIA
 Corporation.
 
+RedLnx Camera Looks F v1
+------------------------
+
+Package:
+
+  redlnx-camera-looks-f-v1.zip
+
+SHA256:
+
+  7b5266f1e15e9b7bf8f40919a5d00b56892c6158f291486bac6410d44ef6830e
+
+The following chroma-only LUTs are generated from GPL-3.0-or-later presets
+embedded in darktable. The tone curve is intentionally excluded so RedLnx's
+own CAM/ODT tone path remains authoritative:
+
+  f-as.cube  F-AS  Inspired by Fujifilm Astia
+  f-cc.cube  F-CC  Inspired by Fujifilm Classic Chrome
+  f-mo.cube  F-MO  Inspired by Fujifilm Monochrome
+  f-pr.cube  F-PR  Inspired by Fujifilm Provia
+  f-ve.cube  F-VE  Inspired by Fujifilm Velvia
+
+These five files derive from the color-checker presets in darktable
+src/iop/colorchecker.c. darktable attributes them to Jo's Fuji film
+emulations. The following file derives from the Acros 100 spectral weights in
+darktable src/iop/channelmixerrgb.c:
+
+  f-ac.cube  F-AC  Inspired by Fujifilm Acros
+
+Copyright (C) darktable developers and the respective preset contributors.
+License: GNU General Public License version 3 or later.
+Source: https://github.com/darktable-org/darktable
+Jo's styles: https://jo.dreggn.org/blog/darktable-fuji-styles.tar.xz
+
+F-AS, F-CC, F-MO, F-PR, F-VE and F-AC are RedLnx display names. Fujifilm and
+the referenced simulation names are used only to describe inspiration and
+compatibility. RedLnx is not affiliated with or endorsed by Fujifilm.
+
 Package contents
 ----------------
 cuda12-win-x64.zip:
