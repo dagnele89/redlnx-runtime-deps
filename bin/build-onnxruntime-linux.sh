@@ -147,6 +147,52 @@ require_packaged_file() {
   fi
 }
 
+# WebGPU is built INTO libonnxruntime.so (static_lib layout), so there is no
+# separate plugin .so to check for. Assert instead that the WebGPU EP actually got
+# linked into the main dylib, otherwise the package would once again register as
+# "not supported in this build" at runtime.
+#
+# NOTE: Dawn strings are NOT a valid marker — Dawn is statically linked into the
+# main dylib in BOTH layouts (the shared-plugin libonnxruntime.so already carries
+# ~12k Dawn/Tint strings). The real discriminator is the EP registration code that
+# provider_registration.cc compiles in only under BUILD_WEBGPU_EP_STATIC_LIB:
+# WebGpuProviderFactoryCreator / WebGpuExecutionProvider. Release libs are not
+# stripped, so nm sees these as local symbols.
+require_builtin_webgpu() {
+  local package_dir="$1"
+  local lib
+  lib="$(readlink -f "$package_dir/libonnxruntime.so")"
+  if [[ -z "$lib" || ! -e "$lib" ]]; then
+    echo "cannot resolve libonnxruntime.so in $package_dir" >&2
+    exit 1
+  fi
+  # NOTE: do NOT pipe into `grep -q` here. Under `set -o pipefail`, grep -q exits
+  # on first match and SIGPIPEs the huge nm/strings producer, making the pipeline
+  # report failure (141) even though the symbol WAS found. Capture a count instead
+  # (grep -c reads all input, so the producer finishes cleanly).
+  if command -v nm >/dev/null 2>&1; then
+    local nm_hits
+    nm_hits="$(nm -C "$lib" 2>/dev/null | grep -cE 'WebGpuProviderFactoryCreator|WebGpuExecutionProvider' || true)"
+    if [[ "${nm_hits:-0}" -gt 0 ]]; then
+      echo "verified: WebGPU EP built into $(basename "$lib") ($nm_hits symbols)"
+      return
+    fi
+  fi
+  # Fallback for stripped libs. Only WebGpuProviderFactoryCreator is safe here:
+  # the EP type-name string "WebGpuExecutionProvider" is also present in the broken
+  # shared-plugin main lib (the not-supported stub), so it must NOT be matched.
+  local str_hits
+  str_hits="$(strings -a "$lib" 2>/dev/null | grep -c 'WebGpuProviderFactoryCreator' || true)"
+  if [[ "${str_hits:-0}" -gt 0 ]]; then
+    echo "verified (strings): WebGPU EP built into $(basename "$lib")"
+    return
+  fi
+  echo "WebGPU EP is NOT built into libonnxruntime.so" >&2
+  echo "(no WebGpuProviderFactoryCreator symbol in $lib)" >&2
+  echo "the build likely still produced a separate plugin instead of static_lib" >&2
+  exit 1
+}
+
 write_manifest_files() {
   local package_dir="$1"
   local provider="$2"
@@ -213,7 +259,13 @@ package_provider() {
       require_packaged_file "$package_dir" libonnxruntime_providers_migraphx.so
       ;;
     webgpu)
-      require_packaged_file "$package_dir" libonnxruntime_providers_webgpu.so
+      # static_lib layout: WebGPU lives inside libonnxruntime.so, no plugin .so.
+      # A reused (CLEAN_BUILD=0) build dir can still hold a libonnxruntime_providers_webgpu.so
+      # left over from an earlier shared_lib build; copy_matches would drag that stale
+      # plugin into the package and mislead the runtime/checker. Drop it so the package
+      # is an honest built-in layout.
+      rm -f "$package_dir/libonnxruntime_providers_webgpu.so"
+      require_builtin_webgpu "$package_dir"
       ;;
   esac
 
@@ -255,7 +307,35 @@ build_provider() {
       args+=(--use_migraphx --migraphx_home "$MIGRAPHX_HOME")
       ;;
     webgpu)
-      args+=(--use_webgpu shared_lib)
+      # WebGPU EP must be linked INTO libonnxruntime.so (built-in layout), matching
+      # the Windows build and what RedLnx's WebGPUExecutionProvider::build() expects.
+      # `shared_lib` emits a separate libonnxruntime_providers_webgpu.so plugin that
+      # ORT 1.24.2 cannot register as built-in (the plugin EP is incomplete in this
+      # tag: onnxruntime/core/providers/webgpu/ep/ ships symbols.def but no api.cc) ->
+      # RedLnx logs "WebGPU execution provider is not supported in this build" and
+      # silently falls back to CPU (~41s/denoise frame).
+      #
+      # `static_lib` sets onnxruntime_BUILD_WEBGPU_EP_STATIC_LIB=ON (platform-agnostic
+      # in build.py, no is_windows() guard) so the EP compiles into libonnxruntime.so.
+      # On Linux the compile-time default backend resolves to 0/auto (the backend_type
+      # block in webgpu_context.h is _WIN32-gated) and Dawn auto-selects Vulkan. We
+      # also flip the Dawn backend flags to the Linux reality: Vulkan ON enables the
+      # use_vulkan_memory_model device toggle; D3D12 OFF drops the meaningless default.
+      # Dawn itself stays statically linked (onnxruntime_BUILD_DAWN_SHARED_LIBRARY left
+      # at its OFF default), so there is no side-by-side libwebgpu_dawn.so to ship.
+      args+=(--use_webgpu static_lib)
+      args+=(--cmake_extra_defines
+        onnxruntime_ENABLE_DAWN_BACKEND_VULKAN=ON
+        onnxruntime_ENABLE_DAWN_BACKEND_D3D12=OFF)
+      # GCC 16 (Fedora) treats Tint's constexpr-calls-non-constexpr pattern as a
+      # default permerror (-Winvalid-constexpr). The Dawn revision pinned by ORT
+      # 1.24.2 predates GCC 16 and builds clang-first; "DAWN Werror" is already OFF,
+      # so this is GCC's own default promotion, not a -Werror. Downgrade just that
+      # diagnostic so the vendored Dawn/Tint compiles. (Verified: the failing TU
+      # tint/lang/core/intrinsic/data.cc.o compiles cleanly with this flag.)
+      # Drop this once a clang toolchain or a Dawn revision new enough for GCC 16
+      # is used for the Linux build.
+      args+=(--cmake_extra_defines "CMAKE_CXX_FLAGS=-Wno-error=invalid-constexpr")
       ;;
     *)
       echo "internal error: unsupported provider $provider" >&2
