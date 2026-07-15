@@ -6,6 +6,25 @@ runtime dependencies. These binary assets are separate third-party components
 and are NOT covered by the AGPL-3.0 license that governs the RedLnx source
 code.
 
+GeoCalib perspective-field model
+--------------------------------
+
+Asset: `geocalib-perspective-field-pinhole.onnx`
+
+SHA256: `1d59fa256989dabb33e03fdcd85813d2c860c4fab7c127e470f924647b06d13c`
+
+This is an ONNX export of the perspective-field network from cvg/GeoCalib at
+revision `97b8968e7798a66bf04fcf791fb535624241bda7`. The upstream source code is
+Apache-2.0 and the pretrained `pinhole` weights are CC-BY-4.0. The export emits
+up-vector, latitude, and confidence fields; it does not include the upstream
+Levenberg-Marquardt optimization loop.
+
+Source: https://github.com/cvg/GeoCalib
+
+Paper: Luca Veicht, Paul-Edouard Sarlin, Philipp Lindenberger, Viktor Larsson,
+Marc Pollefeys, and Torsten Sattler, "GeoCalib: Single-image Calibration with
+Geometric Optimization", ECCV 2024, https://arxiv.org/abs/2409.06704
+
 Linux ONNX Runtime WebGPU/Vulkan runtime
 ----------------------------------------
 
