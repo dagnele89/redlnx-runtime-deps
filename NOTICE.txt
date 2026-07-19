@@ -25,6 +25,67 @@ Paper: Luca Veicht, Paul-Edouard Sarlin, Philipp Lindenberger, Viktor Larsson,
 Marc Pollefeys, and Torsten Sattler, "GeoCalib: Single-image Calibration with
 Geometric Optimization", ECCV 2024, https://arxiv.org/abs/2409.06704
 
+Depth Anything V2 Small FP16
+----------------------------
+
+Asset: `depth-anything-v2-small-fp16.onnx`
+
+SHA256: `10d35ac4e5e705a6d2bcbcb7685e11846fc02e2658cc61ac3a7c6984bb807e11`
+
+This asset is an ONNX export of the Small checkpoint from
+DepthAnything/Depth-Anything-V2, using the export published by
+onnx-community/depth-anything-v2-small-ONNX at revision
+`c3b67641fd837b2368757101311e5d21e511441e`.
+
+The upstream source code and the Small checkpoint are licensed under the
+Apache License 2.0. Only the Small checkpoint is redistributed. The Base,
+Large, and Giant checkpoints are CC-BY-NC-4.0 and are excluded.
+
+Sources:
+
+  https://github.com/DepthAnything/Depth-Anything-V2
+  https://huggingface.co/onnx-community/depth-anything-v2-small-ONNX
+
+EfficientSAM Ti April 2025
+--------------------------
+
+Asset: `efficient-sam-ti-2025apr.onnx`
+
+SHA256: `4eb496e0a7259b435b49b66faf1754aa45a5c382a34558ddda9a8c6fe5915d77`
+
+This asset is the EfficientSAM Ti ONNX model published by
+opencv/image_segmentation_efficientsam at revision
+`1e791988b34b2098736003057da0f3e6bc826259`, derived from
+yformer/EfficientSAM.
+
+License: Apache License 2.0.
+
+Sources:
+
+  https://github.com/yformer/EfficientSAM
+  https://huggingface.co/opencv/image_segmentation_efficientsam
+
+BiRefNet General FP16
+---------------------
+
+Asset: `birefnet-general-fp16.onnx`
+
+SHA256: `3654c741eb80bd926ada8fed1713b506ccf8d30eb1f6487e87eb9f234f33df09`
+
+This asset is an ONNX export of ZhengPeng7/BiRefNet, published by
+onnx-community/BiRefNet-ONNX at revision
+`534d3c82d3bb8b2f0867db6dfbc3a525b8e42f67`.
+
+License: MIT License.
+
+BiRefNet General is preferred; `birefnet_lite_fp16.onnx` remains the
+low-resource fallback.
+
+Sources:
+
+  https://github.com/ZhengPeng7/BiRefNet
+  https://huggingface.co/onnx-community/BiRefNet-ONNX
+
 Linux ONNX Runtime WebGPU/Vulkan runtime
 ----------------------------------------
 
