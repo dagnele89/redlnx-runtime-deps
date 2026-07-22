@@ -86,6 +86,53 @@ Sources:
   https://github.com/ZhengPeng7/BiRefNet
   https://huggingface.co/onnx-community/BiRefNet-ONNX
 
+BiRefNet Portrait FP16
+----------------------
+
+Asset: `birefnet-portrait-fp16.onnx`
+
+SHA256: `4c05930c0b6f1418d02eb1de81c46fe37638ba54f5a93adeb5c674521db10110`
+
+This asset is an ONNX FP16 export of the BiRefNet portrait-matting variant,
+published by onnx-community/BiRefNet-portrait-ONNX (`onnx/model_fp16.onnx`),
+derived from ZhengPeng7/BiRefNet. The exporter replaces the upstream
+`deform_conv2d` with a grid_sample-equivalent so the graph runs in ONNX
+Runtime; the output is a sigmoid-like foreground membership map.
+
+License: MIT License.
+
+Used by RedLnx as the "portrait" option of the subject-mask hair/edge matting
+refinement stage.
+
+Sources:
+
+  https://github.com/ZhengPeng7/BiRefNet
+  https://huggingface.co/onnx-community/BiRefNet-portrait-ONNX
+
+BiRefNet Matting FP32
+---------------------
+
+Asset: `birefnet-matting-fp32.onnx`
+
+SHA256: `f0843e38f6a4e88efc8c5fad4178ad7ed6c818346ce12f82e7b579324fe7e0c5`
+
+This asset is an ONNX FP32 export (opset 16) of ZhengPeng7/BiRefNet-matting,
+published by emrikol/birefnet-matting-onnx (`birefnet-matting.onnx`). The
+exporter replaces the upstream `deform_conv2d` with a grid_sample-equivalent
+so the graph runs in ONNX Runtime; the output is logits (apply a sigmoid for
+the alpha matte). FP32 is retained because a bench measured a structured
+precision loss on hair/edge alpha when this model is converted to FP16.
+
+License: MIT License.
+
+Used by RedLnx as the "matting" option of the subject-mask hair/edge matting
+refinement stage.
+
+Sources:
+
+  https://github.com/ZhengPeng7/BiRefNet
+  https://huggingface.co/emrikol/birefnet-matting-onnx
+
 Linux ONNX Runtime WebGPU/Vulkan runtime
 ----------------------------------------
 
