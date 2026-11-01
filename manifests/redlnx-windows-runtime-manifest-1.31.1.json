@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "releaseTag": "unpublished",
+  "onnxRuntimeVersion": "1.31.1",
+  "notes": [
+    "Built and staged locally; no release asset is uploaded yet, so packages carry artifact names and hashes but no URL.",
+    "The CUDA flavour is three archives: the official ONNX Runtime zip plus the CUDA 13 and cuDNN 9 bundles."
+  ],
+  "packages": [
+    {
+      "id": "windows-x64-cuda",
+      "platform": "windows-x64",
+      "provider": "cuda",
+      "displayName": "Windows x64 CUDA 13 runtime",
+      "archives": [
+        {
+          "artifactName": "onnxruntime-win-x64-gpu_cuda13-1.31.1.zip",
+          "upstreamUrl": "https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-win-x64-gpu_cuda13-1.31.1.zip",
+          "size": 309101542,
+          "sha256": "6c64508de9c04f9d938297287e9d81fa47a2fbbb30cc04e6fac0db88f6cb68c1"
+        },
+        {
+          "artifactName": "cuda13-win-x64.zip",
+          "size": 912269982,
+          "sha256": "6ad15bd0c923e79b244bd756ae93e8ff73fad1eb61875cbb5da22d1d337c6d5d"
+        },
+        {
+          "artifactName": "cudnn9-cuda13-win-x64.zip",
+          "size": 417403905,
+          "sha256": "b8f6681b1ea295b2f99ae21d6f00101eb69105af467f7cc2a6688f22b7952997"
+        }
+      ],
+      "requiredFiles": [
+        "onnxruntime.dll",
+        "onnxruntime_providers_shared.dll",
+        "onnxruntime_providers_cuda.dll",
+        "cublasLt64_13.dll",
+        "cublas64_13.dll",
+        "cudnn64_9.dll"
+      ],
+      "systemRequirements": [
+        "NVIDIA GPU of compute capability 7.5 (Turing) or newer",
+        "NVIDIA driver of the R580 branch or newer"
+      ]
+    },
+    {
+      "id": "windows-x64-webgpu",
+      "platform": "windows-x64",
+      "provider": "webgpu",
+      "displayName": "Windows x64 WebGPU runtime",
+      "archives": [
+        {
+          "artifactName": "redlnx-onnxruntime-windows-x64-webgpu-1.31.1.zip",
+          "size": 19163282,
+          "sha256": "1eb67098882a2144cf12bad349e69e8ab3698da9a7f0a0d800f748379ccde28c"
+        }
+      ],
+      "requiredFiles": [
+        "onnxruntime.dll",
+        "webgpu_dawn.dll",
+        "dxcompiler.dll"
+      ],
+      "systemRequirements": [
+        "Working D3D12 or Vulkan driver from the GPU vendor",
+        "Microsoft Visual C++ 2015-2022 Redistributable (x64)"
+      ]
+    },
+    {
+      "id": "windows-x64-directml",
+      "platform": "windows-x64",
+      "provider": "directml",
+      "displayName": "Windows x64 DirectML runtime",
+      "archives": [
+        {
+          "artifactName": "redlnx-onnxruntime-windows-x64-directml-1.31.1.zip",
+          "size": 17252325,
+          "sha256": "179ca7485f0bf6af7bd7899505bf1164b8bbd97f106b5c495266a805e10c71ca"
+        }
+      ],
+      "requiredFiles": [
+        "onnxruntime.dll",
+        "DirectML.dll"
+      ],
+      "systemRequirements": [
+        "DirectX 12 capable GPU and driver",
+        "Microsoft Visual C++ 2015-2022 Redistributable (x64)"
+      ]
+    }
+  ]
+}
