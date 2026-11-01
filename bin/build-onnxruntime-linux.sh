@@ -6,7 +6,7 @@ usage() {
 Build ONNX Runtime Linux x64 provider bundles for RedLnx.
 
 Environment:
-  ORT_VERSION             ONNX Runtime version, default: 1.24.2
+  ORT_VERSION             ONNX Runtime version, default: 1.31.1
   REDLNX_PROVIDER_SET     webgpu | migraphx | all, default: webgpu
   ROCM_HOME               ROCm root for MIGraphX builds, auto-detected from hipconfig
   MIGRAPHX_HOME           MIGraphX root, default: $ROCM_HOME
@@ -21,9 +21,11 @@ Examples:
   REDLNX_PROVIDER_SET=migraphx MIGRAPHX_HOME=/path/to/migraphx ./bin/build-onnxruntime-linux.sh
 
 Note:
-  ONNX Runtime 1.24.2 no longer exposes a standalone ROCm EP build flag.
-  For AMD Linux, WebGPU/Vulkan is the practical generic GPU path. MIGraphX
-  requires a separate MIGraphX SDK installation.
+  ONNX Runtime no longer exposes a standalone ROCm EP build flag (removed
+  before 1.24). For AMD Linux, WebGPU/Vulkan is the practical generic GPU
+  path. MIGraphX requires a separate MIGraphX SDK installation.
+  Every bundle is built with --no_telemetry: native builds enable 1DS
+  telemetry by default.
 EOF
 }
 
@@ -54,7 +56,7 @@ detect_rocm_home() {
   fi
 }
 
-ORT_VERSION="${ORT_VERSION:-1.24.2}"
+ORT_VERSION="${ORT_VERSION:-1.31.1}"
 REDLNX_PROVIDER_SET="${REDLNX_PROVIDER_SET:-webgpu}"
 ROCM_HOME="${ROCM_HOME:-$(detect_rocm_home)}"
 MIGRAPHX_HOME="${MIGRAPHX_HOME:-$ROCM_HOME}"
@@ -106,7 +108,9 @@ provider_list() {
 
 ensure_source() {
   if [[ ! -d "$SOURCE_DIR/.git" ]]; then
-    git clone --recursive --depth 1 --branch "$TAG" "$REPO_URL" "$SOURCE_DIR"
+    git clone --recursive --depth 1 --shallow-submodules --branch "$TAG" "$REPO_URL" "$SOURCE_DIR"
+  elif [[ "$(git -C "$SOURCE_DIR" describe --tags --exact-match HEAD 2>/dev/null)" == "$TAG" ]]; then
+    echo "existing checkout is already at $TAG"
   else
     git -C "$SOURCE_DIR" fetch --depth 1 origin "$TAG"
     git -C "$SOURCE_DIR" checkout "$TAG"
@@ -213,6 +217,7 @@ write_manifest_files() {
   "provider": "$provider",
   "rocmHomeUsedForBuild": "$ROCM_HOME",
   "migraphxHomeUsedForBuild": "$MIGRAPHX_HOME",
+  "telemetry": "disabled at build time (--no_telemetry)",
   "notes": [
     "Copy or extract these files into RedLnx runtime storage, or point REDLNX_RUNTIME_DIR at this directory.",
     "Provider builds may require matching system GPU driver/runtime libraries on the target system."
@@ -283,10 +288,15 @@ build_provider() {
     rm -rf "$build_dir"
   fi
 
+  # --no_telemetry: the build.py switch (tools/ci_build/build_args.py) that
+  # sets onnxruntime_USE_TELEMETRY=OFF; telemetry is on by default for native
+  # builds. --skip_submodule_sync: ensure_source already checked them out.
   local args=(
     python3 "$SOURCE_DIR/tools/ci_build/build.py"
     --config Release
     --build_shared_lib
+    --no_telemetry
+    --skip_submodule_sync
     --parallel "$JOBS"
     --skip_tests
     --build_dir "$build_dir"
@@ -309,11 +319,11 @@ build_provider() {
     webgpu)
       # WebGPU EP must be linked INTO libonnxruntime.so (built-in layout), matching
       # the Windows build and what RedLnx's WebGPUExecutionProvider::build() expects.
-      # `shared_lib` emits a separate libonnxruntime_providers_webgpu.so plugin that
-      # ORT 1.24.2 cannot register as built-in (the plugin EP is incomplete in this
-      # tag: onnxruntime/core/providers/webgpu/ep/ ships symbols.def but no api.cc) ->
-      # RedLnx logs "WebGPU execution provider is not supported in this build" and
-      # silently falls back to CPU (~41s/denoise frame).
+      # `shared_lib` emits a separate libonnxruntime_providers_webgpu.so plugin EP,
+      # which only registers through RegisterExecutionProviderLibrary (in 1.24.2 it
+      # was not even complete: ep/ shipped symbols.def but no api.cc). Appending the
+      # EP by name then fails -> RedLnx logs "WebGPU execution provider is not
+      # supported in this build" and silently falls back to CPU (~41s/denoise frame).
       #
       # `static_lib` sets onnxruntime_BUILD_WEBGPU_EP_STATIC_LIB=ON (platform-agnostic
       # in build.py, no is_windows() guard) so the EP compiles into libonnxruntime.so.
@@ -329,7 +339,8 @@ build_provider() {
         onnxruntime_ENABLE_DAWN_BACKEND_D3D12=OFF)
       # GCC 16 (Fedora) treats Tint's constexpr-calls-non-constexpr pattern as a
       # default permerror (-Winvalid-constexpr). The Dawn revision pinned by ORT
-      # 1.24.2 predates GCC 16 and builds clang-first; "DAWN Werror" is already OFF,
+      # 1.24.2 predated GCC 16 and builds clang-first (not re-checked against the
+      # Dawn pinned by 1.31.1); "DAWN Werror" is already OFF,
       # so this is GCC's own default promotion, not a -Werror. Downgrade just that
       # diagnostic so the vendored Dawn/Tint compiles. (Verified: the failing TU
       # tint/lang/core/intrinsic/data.cc.o compiles cleanly with this flag.)
