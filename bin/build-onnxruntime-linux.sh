@@ -291,6 +291,9 @@ build_provider() {
   # --no_telemetry: the build.py switch (tools/ci_build/build_args.py) that
   # sets onnxruntime_USE_TELEMETRY=OFF; telemetry is on by default for native
   # builds. --skip_submodule_sync: ensure_source already checked them out.
+  # --skip_tests only skips running them: onnxruntime_BUILD_UNIT_TESTS=OFF
+  # keeps them out of the build, as the Windows script does (1.31.1's
+  # test/util/default_providers.cc does not compile with GCC 16).
   local args=(
     python3 "$SOURCE_DIR/tools/ci_build/build.py"
     --config Release
@@ -302,6 +305,7 @@ build_provider() {
     --build_dir "$build_dir"
     --cmake_generator Ninja
     --compile_no_warning_as_error
+    --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF
     --update
     --build
   )
