@@ -300,33 +300,39 @@ Vulkan backend RedLnx uses; Dawn's notice is in ThirdPartyNotices.txt.
 
 Package:
 
-  redlnx-onnxruntime-linux-x64-migraphx-1.31.1-rocm7.tar.zst
+  redlnx-onnxruntime-linux-x64-migraphx-1.31.1-rocm7.1.1-bundled.tar.zst
 
 SHA256:
 
-  3245482de1efd396763e52e22ed6c40d2480160910fd8b33b608c93582c166bd
-
-Contents:
-
-  libonnxruntime.so
-  libonnxruntime.so.1
-  libonnxruntime.so.1.31.1
-  libonnxruntime_providers_shared.so
-  libonnxruntime_providers_migraphx.so
-  LICENSE
-  ThirdPartyNotices.txt
-  VERSION_NUMBER
-  NOTICE.txt
-  runtime-manifest.txt
-  redlnx-runtime-package.json
+  6ea690136247d8aaa37238793ae98db3b921a9ecb73dcf93e5370c1bb494dcb4
 
 Built from source by `bin/build-onnxruntime-linux.sh` (REDLNX_PROVIDER_SET=
-migraphx) at tag v1.31.1 with `--no_telemetry`, against MIGraphX 2.14 of ROCm
-7.1.1, with `patches/onnxruntime-1.31.1-migraphx-resize-policy.patch`
-applied (Resize's default keep_aspect_ratio_policy, which MIGraphX 2.14 does
-not parse, renamed before ORT hands a graph to MIGraphX). WebGPU and Dawn are
-compiled into libonnxruntime.so as in the WebGPU package. MIGraphX itself
-(MIT) is not in the archive: the provider loads the system's MIGraphX 2.14.
+migraphx) at tag v1.31.1 with `--no_telemetry`, inside
+`containers/linux-manylinux.Containerfile` (AlmaLinux 8, glibc 2.28), against
+MIGraphX 2.14 of AMD's ROCm 7.1.1 RHEL 8 repository, with
+`patches/onnxruntime-1.31.1-migraphx-resize-policy.patch` applied (Resize's
+default keep_aspect_ratio_policy, which MIGraphX 2.14 does not parse, renamed
+before ORT hands a graph to MIGraphX). WebGPU and Dawn are compiled into
+libonnxruntime.so. `bin/bundle-rocm-linux.sh` then puts beside it, unmodified
+but for RUNPATH=$ORIGIN, the ROCm 7.1.1 libraries the provider and MIGraphX's
+GPU target load (MIGraphX, rocBLAS, hipBLASLt, MIOpen, HIP, HSA runtime,
+comgr, rocm-core, rocprofiler-register, roctx, rocRoller) and libnuma, with
+rocBLAS's and hipBLASLt's kernels but those of AMD Instinct GPUs (gfx908,
+gfx90a, gfx94x, gfx950). AMD's licences (MIT, with comgr's LLVM notices) and
+libnuma's LGPL-2.1 with its source pointer are in `licenses/`.
+
+Package:
+
+  redlnx-onnxruntime-linux-x64-webgpu-1.31.1-glibc2.28.tar.zst
+
+SHA256:
+
+  5ccc2d2cd3f81060762874337b40e739a4f5c6d65a9c55927891cc77528fc983
+
+The WebGPU core of the same container build: its libonnxruntime.so and
+libonnxruntime_providers_shared.so, without the MIGraphX provider, which is a
+separate library. It loads on glibc 2.27 and later, where the Fedora-built
+`redlnx-onnxruntime-linux-x64-webgpu-1.31.1.tar.zst` above needs 2.43.
 
 Package:
 
