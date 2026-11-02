@@ -1,0 +1,50 @@
+diff --git a/onnxruntime/core/providers/migraphx/migraphx_execution_provider.cc b/onnxruntime/core/providers/migraphx/migraphx_execution_provider.cc
+index 8908013..f253f99 100644
+--- a/onnxruntime/core/providers/migraphx/migraphx_execution_provider.cc
++++ b/onnxruntime/core/providers/migraphx/migraphx_execution_provider.cc
+@@ -1073,6 +1073,29 @@ GetPartitionedSubgraphs(const std::vector<NodeIndex>& topological_order,
+   return mgx_subgraphx;
+ }
+ 
++// RedLnx: MIGraphX 7.1 throws on Resize's keep_aspect_ratio_policy, which ORT's
++// graph resolution adds to every opset-18 Resize at its default (graph.cc).
++// "stretch" is the behaviour without the attribute; renamed, MIGraphX's parser
++// ignores it. The bridge cannot remove an attribute or read a NodeProto's op
++// type: GraphViewer::ToProto writes the nodes in this topological order.
++static void HideDefaultResizePolicy(const onnxruntime::GraphViewer& graph_viewer,
++                                    ONNX_NAMESPACE::GraphProto& graph_proto) {
++  const auto& order = graph_viewer.GetNodesInTopologicalOrder();
++  for (size_t i = 0; i < order.size(); ++i) {
++    const auto* node = graph_viewer.GetNode(order[i]);
++    if (node == nullptr || node->OpType() != "Resize") {
++      continue;
++    }
++    auto* node_proto = graph_proto.mutable_node(static_cast<int>(i));
++    for (int a = 0; a < node_proto->attribute_size(); ++a) {
++      auto* attribute = node_proto->mutable_attribute(a);
++      if (attribute->name() == "keep_aspect_ratio_policy" && attribute->s() == "stretch") {
++        attribute->set_name("redlnx_default_keep_aspect_ratio_policy");
++      }
++    }
++  }
++}
++
+ std::vector<std::unique_ptr<ComputeCapability>>
+ MIGraphXExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph_viewer,
+                                          const IKernelLookup& /*kernel_lookup*/,
+@@ -1082,6 +1105,7 @@ MIGraphXExecutionProvider::GetCapability(const onnxruntime::GraphViewer& graph_v
+   auto model = graph_viewer.CreateModel(*GetLogger());
+   auto model_proto = model->ToProto();
+   graph_viewer.ToProto(*model_proto->mutable_graph(), true, true);
++  HideDefaultResizePolicy(graph_viewer, *model_proto->mutable_graph());
+   model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
+   std::string onnx_string_buffer;
+   model_proto->SerializeToString(onnx_string_buffer);
+@@ -1341,6 +1365,7 @@ Status MIGraphXExecutionProvider::Compile(const std::vector<FusedNodeAndGraph>&
+     auto model = graph_body_viewer.CreateModel(*GetLogger());
+     auto model_proto = model->ToProto();
+     graph_body_viewer.ToProto(*model_proto->mutable_graph(), true, true);
++    HideDefaultResizePolicy(graph_body_viewer, *model_proto->mutable_graph());
+     model_proto->set_ir_version(ONNX_NAMESPACE::Version::IR_VERSION);
+     std::string onnx_string_buffer;
+     model_proto->SerializeToString(onnx_string_buffer);

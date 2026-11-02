@@ -262,7 +262,7 @@ package_provider() {
       ;;
     migraphx)
       require_packaged_file "$package_dir" libonnxruntime_providers_migraphx.so
-      ;;
+      ;&
     webgpu)
       # static_lib layout: WebGPU lives inside libonnxruntime.so, no plugin .so.
       # A reused (CLEAN_BUILD=0) build dir can still hold a libonnxruntime_providers_webgpu.so
@@ -312,14 +312,18 @@ build_provider() {
 
   case "$provider" in
     migraphx)
-      if ! find "$MIGRAPHX_HOME" -name 'migraphx-config.cmake' -print -quit 2>/dev/null | grep -q .; then
+      # Captured, not piped into grep -q: under pipefail find's non-zero exit on
+      # unreadable directories (MIGRAPHX_HOME=/usr) failed the test with the SDK present.
+      if [[ -z "$(find "$MIGRAPHX_HOME" -name 'migraphx-config.cmake' -print -quit 2>/dev/null || true)" ]]; then
         echo "MIGraphX SDK not found under MIGRAPHX_HOME=$MIGRAPHX_HOME" >&2
         echo "Fedora ROCm packages provide HIP/rocBLAS/MIOpen, but not MIGraphX on this machine." >&2
         echo "Use REDLNX_PROVIDER_SET=webgpu now, or install/build MIGraphX and set MIGRAPHX_HOME." >&2
         exit 1
       fi
       args+=(--use_migraphx --migraphx_home "$MIGRAPHX_HOME")
-      ;;
+      # Falls through: the app loads one core per process, so the MIGraphX core
+      # also carries WebGPU as the generic fallback for graphs MIGraphX rejects.
+      ;&
     webgpu)
       # WebGPU EP must be linked INTO libonnxruntime.so (built-in layout), matching
       # the Windows build and what RedLnx's WebGPUExecutionProvider::build() expects.
@@ -363,7 +367,23 @@ build_provider() {
   package_provider "$provider" "$build_dir"
 }
 
+# The fixes RedLnx carries on top of the ORT tag, patches/onnxruntime-<version>-*.patch.
+# A patch already in the checkout is left as it is.
+apply_patches() {
+  local patch
+  for patch in "$PWD"/patches/onnxruntime-"$ORT_VERSION"-*.patch; do
+    [[ -e "$patch" ]] || continue
+    if git -C "$SOURCE_DIR" apply --reverse --check "$patch" 2>/dev/null; then
+      echo "already applied: $(basename "$patch")"
+    else
+      git -C "$SOURCE_DIR" apply "$patch"
+      echo "applied: $(basename "$patch")"
+    fi
+  done
+}
+
 ensure_source
+apply_patches
 while IFS= read -r provider; do
   build_provider "$provider"
 done < <(provider_list)

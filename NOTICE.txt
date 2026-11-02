@@ -300,6 +300,57 @@ Vulkan backend RedLnx uses; Dawn's notice is in ThirdPartyNotices.txt.
 
 Package:
 
+  redlnx-onnxruntime-linux-x64-migraphx-1.31.1-rocm7.tar.zst
+
+SHA256:
+
+  3245482de1efd396763e52e22ed6c40d2480160910fd8b33b608c93582c166bd
+
+Contents:
+
+  libonnxruntime.so
+  libonnxruntime.so.1
+  libonnxruntime.so.1.31.1
+  libonnxruntime_providers_shared.so
+  libonnxruntime_providers_migraphx.so
+  LICENSE
+  ThirdPartyNotices.txt
+  VERSION_NUMBER
+  NOTICE.txt
+  runtime-manifest.txt
+  redlnx-runtime-package.json
+
+Built from source by `bin/build-onnxruntime-linux.sh` (REDLNX_PROVIDER_SET=
+migraphx) at tag v1.31.1 with `--no_telemetry`, against MIGraphX 2.14 of ROCm
+7.1.1, with `patches/onnxruntime-1.31.1-migraphx-resize-policy.patch`
+applied (Resize's default keep_aspect_ratio_policy, which MIGraphX 2.14 does
+not parse, renamed before ORT hands a graph to MIGraphX). WebGPU and Dawn are
+compiled into libonnxruntime.so as in the WebGPU package. MIGraphX itself
+(MIT) is not in the archive: the provider loads the system's MIGraphX 2.14.
+
+Package:
+
+  redlnx-winml-catalog-windows-x64-2.5.96.zip
+
+SHA256:
+
+  2b2ecb2676233640e42755d9399479b496ca2c9ccc05b81fa3f05aa93ac221ce
+
+Contents:
+
+  Microsoft.Windows.AI.MachineLearning.dll
+  Microsoft.Windows.AI.MachineLearning-LICENSE.txt
+
+The unmodified `Microsoft.Windows.AI.MachineLearning.dll` (win-x64) of the
+NuGet package Microsoft.Windows.AI.MachineLearning 2.5.96, redistributed under
+the Microsoft Windows ML Runtime license terms included beside it (section 3a,
+files binplaced by the NuGet package). Not covered by AGPL-3.0. RedLnx runs it
+once, in a separate process at the user's request, to have Windows download
+AMD's MIGraphX execution provider plugin; under its terms the component may
+send Microsoft usage data while it runs.
+
+Package:
+
   redlnx-onnxruntime-linux-x64-cuda-1.31.1.tar.zst
 
 SHA256:
